@@ -7,13 +7,12 @@ import argparse
 import hashlib
 import json
 import warnings
-
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-LANDMARK = 60
+LANDMARK = 60.0
 
 REQUIRED = {"patientId", "RFS_MONTHS", "RFS_STATUS", "OS_MONTHS", "VITAL_STATUS",
             "ER_IHC", "HER2_SNP6", "AGE_AT_DIAGNOSIS", "TUMOR_SIZE", "GRADE",
@@ -146,10 +145,10 @@ def event_history(data: pd.DataFrame) -> pd.DataFrame:
     censor = out["RFS_EVENT"].eq(0)
     time = out["RFS_MONTHS_NUM"]
 
-    out["EVENT_AT_OR_BEFORE_5Y"] = (event & time.le(60)).astype(int)
-    out["EVENT_AFTER_5Y"] = (event & time.gt(60)).astype(int)
-    out["CENSORED_AT_OR_BEFORE_5Y"] = (censor & time.le(60)).astype(int)
-    out["REACHED_5Y_LANDMARK"] = time.gt(60).astype(int)
+    out["EVENT_AT_OR_BEFORE_5Y"] = (event & time.le(LANDMARK)).astype(int)
+    out["EVENT_AFTER_5Y"] = (event & time.gt(LANDMARK)).astype(int)
+    out["CENSORED_AT_OR_BEFORE_5Y"] = (censor & time.le(LANDMARK)).astype(int)
+    out["REACHED_5Y_LANDMARK"] = time.gt(LANDMARK).astype(int)
 
     out["CONTROL_10Y"] = (censor & time.ge(120)).astype(int)
     out["CONTROL_15Y"] = (censor & time.ge(180)).astype(int)
