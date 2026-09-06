@@ -1,10 +1,15 @@
+#!/usr/bin/env python3
+"""Build event-history and post-five-year CTS5 tables from METABRIC clinical data."""
+
 from __future__ import annotations
 
 import argparse
 import hashlib
 import json
 import warnings
+
 from pathlib import Path
+
 import numpy as np
 import pandas as pd
 
