@@ -1,3 +1,7 @@
+#!/usr/bin/env Rscript
+
+# Run the post-five-year CTS5 clinical benchmark
+
 options(stringsAsFactors = FALSE, warn = 1)
 
 args <- commandArgs(trailingOnly = TRUE)
@@ -56,15 +60,19 @@ d$CTS5_GROUP <- factor(d$CTS5_RISK_GROUP_LITERATURE, levels = c("LOW", "INTERMED
 
 if (any(is.na(d$CTS5_GROUP))) {stop("CTS5 risk-group coding contains unexpected/missing values.")}
 
-normalize_binary_factor <- function(x) {
-  z <- trimws(toupper(as.character(x)))
-  out <- ifelse(z %in% c("YES", "Y", "TRUE", "1", "POSITIVE", "RECEIVED"), "YES",
-                ifelse(z %in% c("NO", "N", "FALSE", "0", "NEGATIVE", "NOT RECEIVED"), "NO", z))
-  factor(out)}
+normalize_binary_factor <- function(x, column) {yes_values <- c("YES", "Y", "TRUE", "1", "POSITIVE", "RECEIVED")
+                                                no_values <- c("NO", "N", "FALSE", "0", "NEGATIVE", "NOT RECEIVED")
+                                                values <- trimws(toupper(as.character(x)))
+                                                normalized <- ifelse(values %in% yes_values, "YES",
+                                                                     ifelse(values %in% no_values, "NO", NA_character_))
+                                                
+                                                if (anyNA(normalized)) {
+                                                  stop(column, " contains missing or unsupported treatment values.")}
+                                                factor(normalized, levels = c("NO", "YES"))}
 
-d$HORMONE_THERAPY_F <- normalize_binary_factor(d$HORMONE_THERAPY)
-d$CHEMOTHERAPY_F <- normalize_binary_factor(d$CHEMOTHERAPY)
-d$RADIO_THERAPY_F <- normalize_binary_factor(d$RADIO_THERAPY)
+d$HORMONE_THERAPY_F <- normalize_binary_factor(d$HORMONE_THERAPY, "HORMONE_THERAPY")
+d$CHEMOTHERAPY_F <- normalize_binary_factor(d$CHEMOTHERAPY, "CHEMOTHERAPY")
+d$RADIO_THERAPY_F <- normalize_binary_factor(d$RADIO_THERAPY, "RADIO_THERAPY")
 
 d$RFS_EVENT_CS <- as.integer(d$POST5_EVENT_TYPE == 1)
 d$CTS5_Z <- as.numeric(scale(d$CTS5_SCORE))
@@ -232,6 +240,7 @@ for (r in seq_len(n_repeats)) {
 if (any(oof_count != n_repeats)) {stop("OOF prediction count failed: each patient must have one prediction per repeat.")}
 
 d$CLINICAL_BASELINE_OOF_LP <- oof_sum / oof_count
+if (any(!is.finite(d$CLINICAL_BASELINE_OOF_LP))) {stop("OOF clinical predictions contain non-finite values.")}
 
 
 # Harrell C and Uno C
@@ -399,5 +408,5 @@ names(auc60)[2] <- "AUC_60M_APPARENT"
 comparison_summary <- Reduce(function(x, y) merge(x, y, by = "MODEL", all = TRUE), list(harrell_compact, uno60, auc60, ibs60))
 write.csv(comparison_summary, file.path(RES, "14_model_comparison_summary.csv"), row.names = FALSE)
 capture.output(sessionInfo(), file = file.path(RES, "sessionInfo.txt"))
-message("Analysis completed. Results written to: ", RES)
-message("Figures written to: ", FIG)
+writeLines(paste("Analysis completed. Results written to:", RES))
+writeLines(paste("Figures written to:", FIG))
